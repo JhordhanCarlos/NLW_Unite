@@ -4,15 +4,38 @@ import { useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors } from "@/styles/colors";
 import { Button } from "@/components/button";
-import { Link } from "expo-router";
+import { Link, Redirect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { api } from "@/server/api";
+import { useBadgeStore } from "@/store/badge-store";
 
 export default function Home() {
   const [code, setCode] = useState("");
-  function handleAccessCredential() {
-    if (!code.trim()) {
-      Alert.alert("Ingresso", "Informe o código do ingresso!");
+  const [isLoading, setIsLoading] = useState(false);
+  const badgeStore = useBadgeStore();
+
+  async function handleAccessCredential() {
+    try {
+      if (!code.trim()) {
+        Alert.alert("Ingresso", "Informe o código do ingresso!");
+      }
+
+      const { data } = await api.get(`/attendees/${code}/badge`);
+      badgeStore.save(data.badge);
+
+      setIsLoading(true);
+    } catch (err) {
+      console.log(err);
+      Alert.alert(
+        "Ingresso",
+        "O código do ingresso está inválido ou não exite!"
+      );
+      setIsLoading(false);
     }
+  }
+
+  if (badgeStore.data?.checkInURL) {
+    return <Redirect href="/ticket" />;
   }
 
   return (
@@ -36,7 +59,11 @@ export default function Home() {
           />
         </Input>
 
-        <Button title="Acessar Credencial" onPress={handleAccessCredential} />
+        <Button
+          title="Acessar Credencial"
+          onPress={handleAccessCredential}
+          isLoading={isLoading}
+        />
 
         <Link
           href="/register"
